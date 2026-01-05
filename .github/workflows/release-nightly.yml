@@ -1,0 +1,28 @@
+
+name: Nightly Release
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"  # Runs 1 hour after builds complete
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Nightly Build
+          tag_name: nightly
+          prerelease: true
+          files: artifacts/**/*
+          fail_on_unmatched_files: false
