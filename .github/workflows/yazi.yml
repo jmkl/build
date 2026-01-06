@@ -1,4 +1,4 @@
-name: Build Bacon (Windows)
+name: Build Yazi (Windows)
 
 on:
   workflow_dispatch:
@@ -30,7 +30,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-
+        with:
+          repository: sxyazi/yazi
+          
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
