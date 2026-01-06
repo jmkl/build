@@ -1,0 +1,59 @@
+name: Build Bacon (Windows)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  build-windows:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      RUSTC_WRAPPER: sccache
+      YAZI_GEN_COMPLETIONS: true
+      CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER: lld-link.exe
+      CARGO_TARGET_AARCH64_PC_WINDOWS_MSVC_LINKER: lld-link.exe
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Build
+        run: cargo build --profile release-windows --locked --target ${{ matrix.target }}
+
+      - name: Pack artifact
+        env:
+          TARGET_NAME: yazi-${{ matrix.target }}
+        run: |
+          New-Item -ItemType Directory -Path ${env:TARGET_NAME}
+          Copy-Item -Path "target\${{ matrix.target }}\release-windows\ya.exe" -Destination ${env:TARGET_NAME}
+          Copy-Item -Path "target\${{ matrix.target }}\release-windows\yazi.exe" -Destination ${env:TARGET_NAME}
+          Copy-Item -Path "yazi-boot\completions" -Destination ${env:TARGET_NAME} -Recurse
+          Copy-Item -Path "README.md", "LICENSE" -Destination ${env:TARGET_NAME}
+          Compress-Archive -Path ${env:TARGET_NAME} -DestinationPath "${env:TARGET_NAME}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}
+          path: yazi-${{ matrix.target }}.zip
